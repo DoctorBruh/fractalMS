@@ -2,7 +2,7 @@
   "name": "fractalMS",
   "version": "1.0.0",
   "description": "",
-  "main": "src/fractal.js",
+  "main": "src/jsNcss/fractal.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
