@@ -1,68 +1,59 @@
-/* fractal.js – depth-coloured Mandelbrot explorer */
+/* fractal.js – 2025-04-30-psychedelic (Tricorn removed, styling kept) */
 
 const canvas = document.getElementById('fractalCanvas');
 const ctx    = canvas.getContext('2d');
 const dpr    = window.devicePixelRatio || 1;
 
-/* ── canvas sizing ── */
-function resizeCanvas() {
-    const { clientWidth: w, clientHeight: h } = canvas;
-    if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
-        canvas.width  = w * dpr;
-        canvas.height = h * dpr;
-        scheduleRender();
+/* ------------ canvas sizing ------------ */
+function resizeCanvas(){
+    const {clientWidth:w,clientHeight:h}=canvas;
+    if(canvas.width!==w*dpr||canvas.height!==h*dpr){
+        canvas.width=w*dpr; canvas.height=h*dpr; scheduleRender();
     }
 }
-addEventListener('resize', resizeCanvas);
+addEventListener('resize',resizeCanvas);
 
-/* ── controls ── */
-const $ = id => document.getElementById(id);
-const iterIn  = $('iter');
-const zoomIn  = $('zoom');
-const cxField = $('centerX');
-const cyField = $('centerY');
-const paletteIn = $('palette');
-const cyclesIn  = $('cycles');
-const resetBtn  = $('resetBtn');
-const dlBtn     = $('downloadBtn');
+/* ------------ UI elements ------------ */
+const $=id=>document.getElementById(id);
+const iterIn=$('iter'), zoomIn=$('zoom'), cxField=$('centerX'), cyField=$('centerY');
+const paletteIn=$('palette'), cyclesIn=$('cycles'), formulaIn=$('formula');
+const resetBtn=$('resetBtn'), dlBtn=$('downloadBtn');
 
-const state = {
-    baseIter : +iterIn.value,
-    zoomExp  : +zoomIn.value,
-    cx       : -0.75,
-    cy       : 0,
-    palette  : paletteIn.value,
-    cycles   : +cyclesIn.value
+const state={
+    baseIter:+iterIn.value,  zoomExp:+zoomIn.value,
+    cx:-0.75,  cy:0,
+    palette:paletteIn.value, cycles:+cyclesIn.value,
+    formula:formulaIn.value
 };
 
-let generation = 0;
+let generation=0;
 
-/* ── worker pool ── */
-const TILE        = 128;
-const MAX_WORKERS = Math.min(navigator.hardwareConcurrency || 2, 4);
-const freeWorkers = [];
-const taskQueue   = [];
-const workerSrc = String.raw`
-self.onmessage = e => {
-  const { gen, tx, ty, w, h, cx, cy, zoomExp, baseIter,
-          palette, cycles, dpr, canvasW, canvasH } = e.data;
+/* ------------ worker pool ------------ */
+const TILE=96;
+const MAX_WORKERS=Math.min(navigator.hardwareConcurrency||4,8);
+const freeWorkers=[], taskQueue=[];
 
-  const span  = 3 / Math.pow(10, zoomExp);
-  const scale = span / Math.min(canvasW, canvasH) / dpr;
-  const maxIt = Math.max(baseIter, Math.ceil(150 * Math.pow(1.55, zoomExp)));
+/* --- inline worker (Tricorn branch removed) --- */
+const workerSrc=String.raw`
+self.onmessage=e=>{
+  const{gen,tx,ty,w,h,cx,cy,zoomExp,baseIter,palette,cycles,formula,dpr,canvasW,canvasH}=e.data;
+  const span=3/10**zoomExp;
+  const scale=span/Math.min(canvasW,canvasH)/dpr;
+  const maxIt=Math.max(baseIter,
+    Math.floor(200*(1.3**Math.min(zoomExp,8))+50*Math.max(zoomExp-8,0)));
 
-  const hsl = (h,s,l)=>{h/=360;s/=100;l/=100;
-    const k=n=>(n+h)%1;const a=s*Math.min(l,1-l);
+  const hsl=(h,s,l)=>{h/=360;s/=100;l/=100;
+    const k=n=>(n+h)%1,a=s*Math.min(l,1-l);
     const f=n=>{const t=k(n);return l-a*Math.max(-1,Math.min(t*6-3,4-t*6,1));};
-    return [f(0)*255,f(8/12)*255,f(4/12)*255];};
-  const rgba32 = (r,g,b,a=255)=>(a<<24)|(b<<16)|(g<<8)|r;
+    return[f(0)*255,f(8/12)*255,f(4/12)*255];};
+  const rgba32=(r,g,b,a=255)=>(a<<24)|(b<<16)|(g<<8)|r;
 
-  const colour = i=>{
-    if(i===maxIt) return [20,20,20];
+  const colour=i=>{
+    if(i===maxIt)return[20,20,20];
     const hue=((i*cycles/maxIt)*360)%360;
     switch(palette){
-      case'fire'  :return [255,50+205*(hue/360),0];
-      case'ice'   :return [0,120+135*(hue/360),255];
+      case'fire'  :return[255,50+205*(hue/360),0];
+      case'ice'   :return[0,120+135*(hue/360),255];
       case'forest':return hsl(120-60*(hue/360),80,35+25*(hue/360));
       default     :return hsl(hue,90,50);
     }
@@ -71,29 +62,47 @@ self.onmessage = e => {
   const inBulbs=(x,y)=>(x+1)**2+y*y<0.0625||
     (()=>{const dx=x-0.25,q=dx*dx+y*y;return q<=0.25*(q+dx);})();
 
-  const mandel=(x0,y0)=>{
-    if(inBulbs(x0,y0))return maxIt;
+  function iterate(x0,y0){
     let x=0,y=0,x2=0,y2=0,i=0;
-    while(x2+y2<=4&&i<maxIt){
-      y=2*x*y+y0;
-      x=x2-y2+x0;
-      x2=x*x;y2=y*y;i++;
+    switch(formula){
+      case'multibrot3': /* z -> z³ + c */
+        while(x2+y2<=4&&i<maxIt){
+          const xT=x*(x2-3*y2)+x0;
+          const yT=y*(3*x2-y2)+y0;
+          x=xT;y=yT;x2=x*x;y2=y*y;i++;
+        } break;
+
+      case'burningShip':
+        while(x2+y2<=4&&i<maxIt){
+          const xT=x2 - y2 + x0;
+          const yT=2*x*y + y0;
+          x=Math.abs(xT); y=Math.abs(yT);
+          x2=x*x;y2=y*y;i++;
+        } break;
+
+      default: /* Mandelbrot */
+        if(inBulbs(x0,y0))return maxIt;
+        while(x2+y2<=4&&i<maxIt){
+          y=2*x*y+y0;
+          x=x2 - y2 + x0;
+          x2=x*x;y2=y*y;i++;
+        }
     }
     return i;
-  };
+  }
 
-  const buf=new Uint32Array(w*h);let p=0;
-  const startX=cx-span/2+tx*scale;
-  const startY=cy-span/2+ty*scale;
+  const buf=new Uint32Array(w*h); let p=0;
+  const startX=cx-span/2+tx*scale, startY=cy-span/2+ty*scale;
   for(let py=0;py<h;py++){
     const y0=startY+py*scale;
     for(let px=0;px<w;px++){
       const x0=startX+px*scale;
-      buf[p++]=rgba32(...colour(mandel(x0,y0)));
+      buf[p++]=rgba32(...colour(iterate(x0,y0)));
     }
   }
   self.postMessage({gen,x:tx,y:ty,w,h,buf:buf.buffer},[buf.buffer]);
 };`;
+
 function makeWorker(){
     const w=new Worker(URL.createObjectURL(new Blob([workerSrc],{type:'application/javascript'})));
     w.onmessage=({data})=>{
@@ -101,94 +110,99 @@ function makeWorker(){
             const img=new ImageData(new Uint8ClampedArray(data.buf),data.w,data.h);
             ctx.putImageData(img,data.x,data.y);
         }
-        freeWorkers.push(w);dispatch();
+        freeWorkers.push(w); dispatch();
     };
     return w;
 }
 for(let i=0;i<MAX_WORKERS;i++) freeWorkers.push(makeWorker());
 
 function dispatch(){
-    while(freeWorkers.length&&taskQueue.length){
+    while(freeWorkers.length&&taskQueue.length)
         freeWorkers.pop().postMessage(taskQueue.shift());
-    }
 }
 
-/* ── rendering ── */
-const span = ()=>3/Math.pow(10,state.zoomExp);
+/* ------------ rendering ------------ */
+const span=()=>3/10**state.zoomExp;
 
 function scheduleRender(){
-    if(!canvas.width) return;
-    generation++;
-    taskQueue.length=0;
-    ctx.fillStyle='#000';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    if(!canvas.width)return;
+    generation++; taskQueue.length=0;
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
 
     const W=canvas.width,H=canvas.height;
     for(let y=0;y<H;y+=TILE){
         for(let x=0;x<W;x+=TILE){
             const w=Math.min(TILE,W-x),h=Math.min(TILE,H-y);
-            taskQueue.push({
-                gen:generation,tx:x,ty:y,w,h,
+            taskQueue.push({gen:generation,tx:x,ty:y,w,h,
                 cx:state.cx,cy:state.cy,zoomExp:state.zoomExp,
                 baseIter:state.baseIter,palette:state.palette,
-                cycles:state.cycles,dpr,canvasW:W,canvasH:H
-            });
+                cycles:state.cycles,formula:state.formula,
+                dpr,canvasW:W,canvasH:H});
         }
     }
     dispatch();
 }
 
-/* ── UI sync ── */
+/* ------------ UI sync ------------ */
 function syncFromInputs(){
-    state.baseIter=+iterIn.value||50;
+    state.baseIter=+iterIn.value||500;
     state.zoomExp=+zoomIn.value||0;
     state.palette=paletteIn.value;
     state.cycles=+cyclesIn.value||4;
+    state.formula=formulaIn.value;
+
     iterIn.value=state.baseIter;
     zoomIn.value=state.zoomExp.toFixed(1);
-    cxField.value=state.cx.toFixed(5);
-    cyField.value=state.cy.toFixed(5);
-    cyclesIn.value=state.cycles;
+    cxField.value=state.cx.toFixed(6);
+    cyField.value=state.cy.toFixed(6);
+
     scheduleRender();
 }
-[iterIn,zoomIn,paletteIn,cyclesIn].forEach(el=>el.addEventListener('change',syncFromInputs));
+[iterIn,zoomIn,paletteIn,cyclesIn,formulaIn]
+    .forEach(el=>el.addEventListener('change',syncFromInputs));
 
-/* ── interactions ── */
+/* ------------ interactions ------------ */
 canvas.addEventListener('dblclick',e=>{
-    const r=canvas.getBoundingClientRect();
-    const s=span()/Math.min(r.width,r.height);
+    const r=canvas.getBoundingClientRect(), s=span()/Math.min(r.width,r.height);
     state.cx+=(e.clientX-r.left-r.width/2)*s;
     state.cy+=(e.clientY-r.top -r.height/2)*s;
     scheduleRender();
 });
 resetBtn.addEventListener('click',()=>{
-    iterIn.value=500;zoomIn.value=0;cyclesIn.value=4;
-    state.cx=-0.75;state.cy=0;paletteIn.value='classic';
+    iterIn.value=500; zoomIn.value=0; cyclesIn.value=4;
+    state.cx=-0.75; state.cy=0; paletteIn.value='classic'; formulaIn.value='mandelbrot';
     syncFromInputs();
 });
 dlBtn.addEventListener('click',()=>{
     const a=document.createElement('a');
-    a.download='mandelbrot.png';
-    a.href=canvas.toDataURL('image/png');
-    a.click();
+    a.download='fractal.png'; a.href=canvas.toDataURL('image/png'); a.click();
 });
 addEventListener('keydown',e=>{
-    const arrows={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
-    if(e.key in arrows){
-        e.preventDefault();
-        const [dx,dy]=arrows[e.key];
-        const step=span()*0.025;
-        state.cx+=dx*step;state.cy+=dy*step;
-        scheduleRender();
-    }else if(e.key==='w'||e.key==='W'){
-        e.preventDefault();state.zoomExp=Math.min(6,+(state.zoomExp+0.1).toFixed(1));scheduleRender();
-    }else if(e.key==='s'||e.key==='S'){
-        e.preventDefault();state.zoomExp=Math.max(0,+(state.zoomExp-0.1).toFixed(1));scheduleRender();
+    const dir={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+    if(e.key in dir){e.preventDefault();
+        const[dx,dy]=dir[e.key], step=span()*0.025;
+        state.cx+=dx*step; state.cy+=dy*step; scheduleRender();
+    }else if(e.key==='w'||e.key==='W'){e.preventDefault();
+        state.zoomExp=Math.min(15,+(state.zoomExp+0.2).toFixed(1));
+        zoomIn.value=state.zoomExp; scheduleRender();
+    }else if(e.key==='s'||e.key==='S'){e.preventDefault();
+        state.zoomExp=Math.max(0,+(state.zoomExp-0.2).toFixed(1));
+        zoomIn.value=state.zoomExp; scheduleRender();
     }
 });
 
-/* ── boot ── */
+/* ------------ tutorial modal ------------ */
+const modal=$('tutorialModal'), closeTut=$('closeTutorial');
+function maybeShowTutorial(){
+    if(!localStorage.getItem('tutorialSeen'))
+        modal.classList.add('show');
+}
+closeTut.addEventListener('click',()=>{
+    modal.classList.remove('show');
+    localStorage.setItem('tutorialSeen','1');
+});
+
+/* ------------ boot ------------ */
 addEventListener('load',()=>{
-    resizeCanvas();
-    syncFromInputs();
+    resizeCanvas(); syncFromInputs(); maybeShowTutorial();
 });
