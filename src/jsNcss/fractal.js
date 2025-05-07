@@ -6,18 +6,17 @@ const dpr    = window.devicePixelRatio || 1;
 
 /* ------------ canvas sizing ------------ */
 function resizeCanvas(){
-    // Get actual client dimensions
     const {clientWidth:w, clientHeight:h} = canvas.parentElement;
 
-    // Always update canvas dimensions to fill the entire parent container
+    // update canvas dimensions
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
 
-    // Set actual canvas dimensions accounting for device pixel ratio
+    // Set actual canvas dimensions w device pixel ratio
     canvas.width = w * dpr;
     canvas.height = h * dpr;
 
-    // Always schedule a render when canvas is resized
+    // Rerender
     scheduleRender();
 }
 
@@ -73,7 +72,7 @@ self.onmessage=e=>{
     return[f(0)*255,f(8/12)*255,f(4/12)*255];};
   const rgba32=(r,g,b,a=255)=>(a<<24)|(b<<16)|(g<<8)|r;
 
-  const colour=i=>{
+  const color=i=>{
     if(i===maxIt)return[20,20,20];
     const hue=((i*cycles/maxIt)*360)%360;
     switch(palette){
@@ -137,7 +136,7 @@ self.onmessage=e=>{
     const y0=startY+py*scale;
     for(let px=0;px<w;px++){
       const x0=startX+px*scale;
-      buf[p++]=rgba32(...colour(iterate(x0,y0)));
+      buf[p++]=rgba32(...color(iterate(x0,y0)));
     }
   }
   self.postMessage({gen,x:tx,y:ty,w,h,buf:buf.buffer},[buf.buffer]);
