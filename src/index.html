@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fractal Builder – Psychedelic Playground</title>
+    <title>Fractal Zoom</title>
 
     <!-- groovy fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Monoton&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
@@ -15,16 +15,16 @@
 <!-- tutorial modal -->
 <div id="tutorialModal" class="modal">
     <div class="modalContent">
-        <h2>Welcome, Cosmic Traveller ✨</h2>
-        <p>Explore mind-bending fractals &amp; tweak their vibes.</p>
+        <h2>Welcome friend.</h2>
+        <p>Check out this fractal.</p>
         <ul>
             <li><strong>Dbl-click</strong> – centre view on cursor</li>
             <li><strong>Arrow keys</strong> – pan</li>
             <li><strong>W / S</strong> – zoom in / out toward cursor</li>
-            <li><strong>Right panel</strong> – iterations, colours …</li>
+            <li><strong>Right panel</strong> – iterations, colors …</li>
             <li><strong>Top-right menu</strong> – switch formula</li>
         </ul>
-        <button id="closeTutorial">Beam me in!</button>
+        <button id="closeTutorial">Fractal time</button>
     </div>
 </div>
 
@@ -40,7 +40,7 @@
 </select>
 
 <aside id="controls">
-    <h1>Fractal&nbsp;Controls</h1>
+    <h1>Controls</h1>
 
     <label>Max Iterations
         <input id="iter" type="number" min="50" max="20000" step="50" value="500">
@@ -58,16 +58,16 @@
         <input id="centerY" type="number" step="0.000001" value="0" disabled>
     </label>
 
-    <label>Colour Scheme
+    <label>color Scheme
         <select id="palette">
-            <option value="classic">Classic</option>
-            <option value="fire">Fire</option>
-            <option value="ice">Ice</option>
-            <option value="forest">Forest</option>
+            <option value="classic">Multi</option>
+            <option value="fire">Red</option>
+            <option value="ice">Blue</option>
+            <option value="forest">Green</option>
         </select>
     </label>
 
-    <label>Colour Cycles
+    <label>color Cycles
         <input id="cycles" type="number" min="1" max="40" step="1" value="4">
     </label>
 
